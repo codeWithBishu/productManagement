@@ -42,13 +42,13 @@ const createUser = async function (req, res) {
     try {
         let data = req.body;
         let message;
-        if ((message = body(data))) { return res.status(400).send({ status: false, message: message }) };
+        if ((message = body(data))) { return res.status(400).send({ status: false, message: `${message}` }) };
         let { fname, lname, email, phone, password, address } = data
         if ((message = check(fname))) { return res.status(400).send({ status: false, message: `fname ${message}` }) }
         fname = fname.trim()
         if ((!name(fname))) { return res.status(400).send({ status: false, message: `please enter a valid fname` }) }
 
-        if ((message = check(fname))) { return res.status(400).send({ status: false, message: `lname ${message}` }) }
+        if ((message = check(lname))) { return res.status(400).send({ status: false, message: `lname ${message}` }) }
         lname = lname.trim()
         if ((!name(lname))) { return res.status(400).send({ status: false, message: `please enter a valid lname` }) }
 
@@ -84,7 +84,6 @@ const createUser = async function (req, res) {
         let duplicatePhone = await userModel.findOne({ phone });
         if (duplicatePhone) { return res.status(400).send({ status: false, message: "phone no. is already registered" }) }
 
-    data = new userModel(data);
     const salt = await bcrypt.genSalt(10);
     data.password = await bcrypt.hash(data.password, salt);
 
@@ -150,6 +149,8 @@ const createUser = async function (req, res) {
 
     }
 }
+
+
 const getUserDetails = async function (req, res) {
 
   try {
