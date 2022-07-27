@@ -1,5 +1,8 @@
 const userModel = require('../models/userModel')
 const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
+const { isValid, isValidObjectId,isValidRequestBody ,isValidEmail,isValidName,isValidPassword,isValidPincode,isValidPhone,uploadFile } = require('../validator/validator')
+
 
 const body = (ele) => {
     if (Object.keys(ele).length) return;
@@ -9,7 +12,7 @@ const body = (ele) => {
 const check = (ele) => {
     if (ele == undefined) { return `is missing` }
     if (typeof ele != "string") { return `should must be a string` }
-    ele = ele.trim();
+    // ele = ele.trim();
     if (!ele.length) { return `isn't valid` }
     if (ele.match("  ")) return `can't have more than one consecutive spaces'`;
 };
@@ -40,25 +43,39 @@ const validateEmail = (email) => {
 
 const createUser = async function (req, res) {
     try {
+      let files=req.files
+      
+      let userImage = await uploadFile(files[0]);
+
+
         let data = req.body;
         let message;
         if ((message = body(data))) { return res.status(400).send({ status: false, message: `${message}` }) };
         let { fname, lname, email, phone, password, address } = data
+        
         if ((message = check(fname))) { return res.status(400).send({ status: false, message: `fname ${message}` }) }
         fname = fname.trim()
         if ((!name(fname))) { return res.status(400).send({ status: false, message: `please enter a valid fname` }) }
 
+
         if ((message = check(lname))) { return res.status(400).send({ status: false, message: `lname ${message}` }) }
         lname = lname.trim()
+
         if ((!name(lname))) { return res.status(400).send({ status: false, message: `please enter a valid lname` }) }
 
         if ((message = check(email))) { return res.status(400).send({ status: false, message: `email ${message}` }) }
         email = email.trim()
         if ((!validateEmail(email))) { return res.status(400).send({ status: false, message: `please enter a valid email` }) }
 
+        let duplicateEmail = await userModel.findOne({ email });
+        if (duplicateEmail) { return res.status(400).send({ status: false, message: "Email is already registered" }) }
+
         if ((message = check(phone))) { return res.status(400).send({ status: false, message: `phone no. ${message}` }) }
         phone = phone.trim()
         if ((!mobile(phone))) { return res.status(400).send({ status: false, message: `please enter a valid phone no.` }) }
+
+        let duplicatePhone = await userModel.findOne({ phone });
+        if (duplicatePhone) { return res.status(400).send({ status: false, message: "phone no. is already registered" }) }
 
         if ((message = check(password))) { return res.status(400).send({ status: false, message: `password ${message}` }) }
         password = password.trim()
@@ -78,14 +95,16 @@ const createUser = async function (req, res) {
 
         if (!pincodeReg.test(address.billing.pincode)) { return res.status(400).send({ status: false, message: `pincode isn't valid` }); }
 
-        let duplicateEmail = await userModel.findOne({ email });
-        if (duplicateEmail) { return res.status(400).send({ status: false, message: "Email is already registered" }) }
+        
 
-        let duplicatePhone = await userModel.findOne({ phone });
-        if (duplicatePhone) { return res.status(400).send({ status: false, message: "phone no. is already registered" }) }
+        
+
+
 
     const salt = await bcrypt.genSalt(10);
-    data.password = await bcrypt.hash(data.password, salt);
+    hashPassword = await bcrypt.hash(password, salt);
+    data.profileImage = userImage
+    data.password = hashPassword
 
 
     let userData = await userModel.create(data);
@@ -135,13 +154,14 @@ const createUser = async function (req, res) {
         if (!checkPassword) return res.status(401).send({ status: false, message: `Login failed password is incorrect.` });
         
         let userId=userData._id
+
         const token = jwt.sign({
             userId: userId,
-            iat: Math.floor(Date.now() / 1000),
+            iat: Math.floor(Date.now() / 1000) ,
             exp: Math.floor(Date.now() / 1000)  +  24 * 60 * 60
         }, 'ProjectNo-5')
 
-        return res.status(200).send({ status: true, message: "Login Successful", data: {Token:token} });
+        return res.status(200).send({ status: true, message: "Login Successful", data: {userId:userId,Token:token} });
 
     } catch (err) {
 
@@ -156,7 +176,6 @@ const getUserDetails = async function (req, res) {
   try {
 
       const userId = req.params.userId
-      const userIdFromToken = req.userId
 
 
       if (!isValidObjectId(userId)) {
@@ -169,9 +188,6 @@ const getUserDetails = async function (req, res) {
           return res.status(404).send({ status: false, message: "User Not Found" })
       }
 
-      if (findUserDetails._id.toString() != userIdFromToken) {
-          return res.status(403).send({ status: false, message: "You Are Not Authorized" });
-      }
 
       return res.status(200).send({ status: true, message: "Profile Fetched Successfully", data: findUserDetails })
 
