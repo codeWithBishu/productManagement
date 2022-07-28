@@ -10,7 +10,11 @@ router.post("/login",userController.userLogin)
 
 router.get("/user/:userId/profile",auth.userAuthentication, userController.getUserDetails)
 
+router.put('/user/:userId/profile',auth.userAuthentication, userController.updateUserDetails)
+
 router.post("/product", productController.createProduct)
+
+router.get("/products/:productId", productController.getProductById)
 
 
 

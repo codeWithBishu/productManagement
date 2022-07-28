@@ -1,6 +1,6 @@
 const product = require('../models/productModel')
 
-const {uploadFile} = require('../validator/validator')
+const {uploadFile, isValidObjectId} = require('../validator/validator')
 
 const body = (ele) => {
     if (Object.keys(ele).length) return;
@@ -19,10 +19,11 @@ const name = (ele) => {
     let regEx = /^[a-zA-z]+([\s][a-zA-Z]+)*$/;
     return regEx.test(ele);
   };
+
   const checkNumber = (ele) => {
     if (ele == undefined) { return `is missing` }
     if (typeof ele != "number") { return `should must be a Number` }
-    ele = ele.trim();
+    // ele = ele.trim();
     if (!ele.length) { return `isn't valid` }
 };
 
@@ -82,6 +83,23 @@ const createProduct = async function(req,res){
 
 }
 
+const getProductById = async function(req,res){
+    try{
 
+    productId = req.params.productId
+    if (!isValidObjectId(productId)) {return res.status(400).send({ status: false, message: "Invalid productId in path param" })}
+    let findProduct = await product.findById({productId})
+
+    if(!findProduct) {return res.status(200).send({status:false, message: "No product exists with this id"})}
+
+    if(findProduct.isdeleted) {return res.status(200).send({status:false, message: "product is already deleted"})}
+
+    return res.status(200).send({ status: true, data: findProduct });
+    
+}catch(err){
+    res.status(500).send({ msg: err.message });
+}
+}
 
 module.exports.createProduct = createProduct
+module.exports.getProductById = getProductById
